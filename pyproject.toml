@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "agentechilecompra"
+version = "0.1.0"
+description = "Ia assistant for Chilecompra OC data extraction"
+authors = ["Eduardo Bachmann <eduardo.bachmann.f@gmail.com>"]
+license = "M.I.T."
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+langchain = {extras = ["openai"], version = "^0.3.27"}
+fastapi = "^0.116.1"
+python-dotenv = "^1.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
