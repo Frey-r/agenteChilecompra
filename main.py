@@ -5,7 +5,7 @@ import util.logger_config as logger_config
 
 #logger
 logger = logger_config.get_logger(__name__)
-logger.info("Inicializando agente")
+logger.info("Inicializando Programa")
 
 #env variables
 dotenv.load_dotenv()
