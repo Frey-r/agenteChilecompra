@@ -42,3 +42,4 @@ if __name__ == "__main__":
     logger = get_logger(__name__)
     logger.info("Test log message")
     logger.error("Test error message")
+    logger.debug("Test debug message")
