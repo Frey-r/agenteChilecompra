@@ -11,7 +11,7 @@ def get_logger(name = __name__):
         os.makedirs(LOG_DIR)
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)  
+    logger.setLevel(logging.DEBUG)  
 
     if not logger.handlers:
         log_filename = os.path.join(LOG_DIR, f"agenteChilecompra_{datetime.now().strftime('%Y%m%d')}.log")
@@ -23,7 +23,7 @@ def get_logger(name = __name__):
         )
         file_handler.setLevel(logging.INFO)
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)
         file_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
