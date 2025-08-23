@@ -14,7 +14,7 @@ def get_logger(name = __name__):
     logger.setLevel(logging.INFO)  
 
     if not logger.handlers:
-        log_filename = os.path.join(LOG_DIR, f"elorace_{datetime.now().strftime('%Y%m%d')}.log")
+        log_filename = os.path.join(LOG_DIR, f"agenteChilecompra_{datetime.now().strftime('%Y%m%d')}.log")
         file_handler = RotatingFileHandler(
             log_filename,
             maxBytes=10485760,  # 10MB
