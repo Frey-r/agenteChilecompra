@@ -11,34 +11,19 @@ print("APIKEY: ", APIKEY)
 
 def init_llm():
     try:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        print("Modelo de Lenguaje (LLM) inicializado correctamente.")   
+        # Usamos un modelo más accesible como gpt-3.5-turbo
+        llm = ChatOpenAI(model="gpt-5", temperature=0, api_key=APIKEY)
+        print("Modelo de Lenguaje (LLM) inicializado correctamente.")
         return llm
     except Exception as e:
-        print(f"Ocurrió un error al inicializar o invocar el LLM: {e}")
+        print(f"Ocurrió un error al inicializar el LLM: {e}")
         return None
 
-def base_query():
-    query = f""
-    return query
-
 if __name__ == "__main__":
+    print("--- Iniciando Agente de Inteligencia de Negocios ---")
+    # 1. Inicializar el LLM
+    llm_instance = init_llm()
 
-    print("Test Orquestador")
-
-    # 2. Inicializar el modelo de lenguaje (LLM)
-    # Usamos ChatOpenAI que es ideal para modelos como gpt-3.5-turbo o gpt-4
-    # - model: Especifica el modelo que quieres usar.
-    # - temperature: Controla la "creatividad" del modelo. 0 es más determinista, 1 es más creativo.
-    try:
-        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        print("Modelo de Lenguaje (LLM) inicializado correctamente.")
-
-        # 3. Prueba rápida para ver si funciona
-        print("\n--- Realizando una prueba de invocación ---")
-        respuesta = llm.invoke("Hola, ¿hwoami?")
-
-        print(f"\nRespuesta del LLM: {respuesta.content}")
-
-    except Exception as e:
-        print(f"Ocurrió un error al inicializar o invocar el LLM: {e}")
+    if llm_instance:
+        print(llm_instance.invoke("hola").content)
+    print("\n--- Proceso del Agente Finalizado ---")
