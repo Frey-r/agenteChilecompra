@@ -7,6 +7,7 @@ from langchain.prompts import ChatPromptTemplate
 from util.logger_config import get_logger
 import json
 from sqlalchemy import create_engine
+from partial_json_parser import loads
 
 logger = get_logger(__name__)
 
@@ -108,7 +109,7 @@ def user_query(user_question: str):
         logger.debug("Obteniendo contexto de documentos...")
         doc_context = documents_context()
 
-        prompt = f"""Eres un asistente experto que responde preguntas sobre órdenes de compra del sector público de Chile.
+        prompt_conocimiento = f"""Eres un asistente experto que responde preguntas sobre órdenes de compra del sector público de Chile.
 
         Tienes acceso a dos fuentes de información:
         1. Una base de datos con el siguiente esquema:
@@ -121,20 +122,80 @@ def user_query(user_question: str):
         {json.dumps(doc_context, indent=4)}
         ```
 
-        Basándote exclusivamente en esta información, responde la pregunta del usuario de manera clara y concisa.
-        Pregunta del usuario: {user_question}
+        Basándote exclusivamente en esta información, responde donde está la información que necesito para responder a esta pregunta: {user_question}
+        responde en formato json con la siguiente estructura:
+        ```json
+        {
+            "base_de_datos": Boolean,
+            "documentos":["collection_name"]
+        }
+        ```
+        ejemplo:
+        ```json
+        {
+            "base_de_datos": True,
+            "documentos":["LangChain_4f9bea898c094ff6b5465f57ca978cf5","LangChain_e00aa9eee070450ba3aa403e453c696f"]
+        }
         """
-        logger.debug(f"Prompt construido para el LLM: {prompt[:500]}...")
+        logger.debug(f"Prompt construido para el LLM: {prompt_conocimiento[:500]}...")
 
-        response = llm.invoke(prompt)
+
+        response_conocimiento = llm.invoke(prompt_conocimiento)
+        jsoned_response_conocimiento = loads(response_conocimiento.content)
+
+        client = doc_llm_controller.get_weaviate_client()
+
+        db_data_str = "No se consultaron datos de la base de datos."
+        if jsoned_response_conocimiento.get('base_de_datos', False):
+            logger.info("Consultando la base de datos...")
+            db_result_df, sql_query = bd_llm_controller.answer_user_query(llm, user_question)
+            if db_result_df is not None and not db_result_df.empty:
+                db_data_str = db_result_df.to_json(orient='records', indent=4)
+            else:
+                db_data_str = "La consulta a la base de datos no arrojó resultados."
+
+        doc_data_str = "No se consultaron documentos."
+        if jsoned_response_conocimiento.get('documentos') and len(jsoned_response_conocimiento['documentos']) > 0:
+            logger.info("Consultando documentos...")
+            response_documents = []
+            for doc_name in jsoned_response_conocimiento['documentos']:
+                try:
+                    collection = client.collections.get(doc_name)
+                    search_results = doc_llm_controller.search_documents(collection, user_question)
+                    response_documents.append({doc_name: search_results})
+                except Exception as e:
+                    logger.error(f"Error al buscar en la colección {doc_name}: {e}")
+            if response_documents:
+                doc_data_str = json.dumps(response_documents, indent=4, default=str)
+
+
+        final_prompt = f"""Eres un analista económico experto. Tu tarea es responder la pregunta del usuario basándote en los datos proporcionados.
+        Sintetiza la información de la base de datos y de los documentos para dar una respuesta clara y concisa.
+
+        **Pregunta del Usuario:**
+        {user_question}
+
+        **Datos de la Base de Datos (en formato JSON):**
+        ```json
+        {db_data_str}
+        ```
+
+        **Datos de los Documentos (Resultados de búsqueda semántica):**
+        ```json
+        {doc_data_str}
+        ```
+
+        **Respuesta Final:**
+        """
+
+        logger.info("Generando respuesta final con el agente sintetizador...")
+        final_response = init_llm('gpt-5').invoke(final_prompt)
         logger.info("Respuesta generada por el LLM exitosamente.")
-        return response.content
+        return final_response.content
 
     except Exception as e:
         logger.error(f"Error al procesar la consulta del usuario: {e}")
         return "Lo siento, ocurrió un error al procesar tu pregunta. Por favor, intenta de nuevo más tarde."
-    
-
 
     
     

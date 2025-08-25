@@ -146,7 +146,7 @@ def build_and_execute_query(query_params: dict):
         query = text(query_str)
         result = session.execute(query, params)
         df = pd.read_sql_query(query, engine)
-        return df
+        return df, query
 
 def export_to_excel(df, filename="query_result.xlsx"):
     """
@@ -169,6 +169,13 @@ def export_to_excel(df, filename="query_result.xlsx"):
 def answer_user_query(llm_instance, user_question: str):
     """
     Función principal que orquesta la respuesta a la pregunta de un usuario.
+
+    Args:
+        llm_instance: Instancia del LLM.
+        user_question: Pregunta del usuario.
+    Returns:
+        [0] DataFrame con los resultados de la consulta.
+        [1] String con la consulta SQL.
     """
     print(f"\n--- Procesando la pregunta: '{user_question}' ---")
     try:
@@ -187,10 +194,12 @@ def answer_user_query(llm_instance, user_question: str):
         print("\n--- Resultados de la Consulta (DataFrame) ---")
         if not resultados_df.empty:
             print(resultados_df)
-            export_to_excel(resultados_df)
+            export_to_excel(resultados_df[0])
+            return resultados_df
         else:
             print("No se encontraron resultados.")
 
     except (ValueError, Exception) as e:
         print(f"\nError al procesar la consulta: {e}")
         return None
+    

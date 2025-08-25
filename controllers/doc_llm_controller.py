@@ -98,7 +98,7 @@ def vectorize_documents(doc_path):
         logger.error(f"Error durante la vectorización de documentos: {e}")
         raise
 
-def get_vector_stores(client):
+def get_vector_stores(client=get_weaviate_client()):
     """Obtiene el vector store."""
     logger.info("Obteniendo todos los vector stores...")
     try:
