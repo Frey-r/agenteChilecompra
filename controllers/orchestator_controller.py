@@ -1,6 +1,9 @@
 import os
 import dotenv
 from langchain_openai import ChatOpenAI
+from controllers import doc_llm_controller, bd_llm_controller
+from langchain_core.tools import Tool
+from langchain.prompts import ChatPromptTemplate
 
 #env variables
 dotenv.load_dotenv()
@@ -19,32 +22,3 @@ def init_llm(model: str = "gpt-5"):
         print(f"Ocurrió un error al inicializar el LLM: {e}")
         return None
 
-
-# Inicializar clientes y retrievers una sola vez
-weaviate_client = doc_llm_controller.get_weaviate_client()
-doc_retriever = doc_llm_controller.get_retriever(weaviate_client, "AnuarioAduanas")
-sql_agent_executor = bd_llm_controller.get_sql_agent_executor()
-
-# Definir las herramientas que el orquestador puede usar
-tools = [
-    Tool(
-        name="DocumentSearch",
-        func=doc_retriever.invoke,
-        description="Útil para responder preguntas sobre el contenido de documentos PDF, como el anuario estadístico de aduanas."
-    ),
-    Tool(
-        name="DatabaseQuery",
-        func=sql_agent_executor.invoke,
-        description="Útil para responder preguntas que requieren consultar una base de datos sobre datos de negocio, licitaciones o inteligencia de mercado."
-    ),
-]
-
-def create_orchestrator_agent(llm, tools):
-    """Crea el agente orquestador que decide qué herramienta usar."""
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Eres un asistente inteligente que enruta las preguntas del usuario a la herramienta correcta. Analiza la pregunta y elige la mejor herramienta."),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
-    agent = create_react_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
