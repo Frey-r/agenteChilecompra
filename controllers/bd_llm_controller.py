@@ -24,7 +24,7 @@ def get_db_schema(engine_instance):
         schema[table_name] = columns
     return schema
 
-def generate_query_params_from_llm(user_question: str, db_schema: dict):
+def generate_query_params_from_llm(llm_instance, user_question: str, db_schema: dict):
     """
     Utiliza un LLM para interpretar la pregunta del usuario y generar parámetros para la consulta.
     IMPORTANTE: Esta función NO genera SQL. Solo extrae la información necesaria.
@@ -38,7 +38,7 @@ def generate_query_params_from_llm(user_question: str, db_schema: dict):
     """
 
 
-    db_query = f"""Tu tarea es actuar como un experto analista de datos y SQL. Dada una pregunta de usuario y un esquema de base de datos, 
+    db_prompt = f"""Tu tarea es actuar como un experto analista de datos y SQL. Dada una pregunta de usuario y un esquema de base de datos, 
     tu objetivo es generar un objeto JSON con los parámetros necesarios para construir una consulta SQL que responda a la pregunta.
 
 ### Esquema de la Base de Datos:
@@ -71,7 +71,7 @@ def generate_query_params_from_llm(user_question: str, db_schema: dict):
     rellena los datos en este json """+""" {"table": "", "joins": [], "columns": [], "filters": [], "group_by": [], "order_by": "", "limit": 0}
 Ahora, sigue estos pasos y genera únicamente el objeto JSON para la pregunta del usuario."""
     
-    response = llm.invoke(db_query)
+    response = llm_instance.invoke(db_prompt)
     print(f"Pregunta del usuario: {user_question}")
     print(f"Esquema de BD: {db_schema}\n\n")
     print(f"Respuesta del LLM (Objeto): {response.content}")
