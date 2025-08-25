@@ -2,17 +2,15 @@ import json
 import os
 from sqlalchemy import create_engine, text, inspect, Column, Integer, String, MetaData, Table
 from sqlalchemy.orm import sessionmaker
-from orchestator_controller import init_llm
+import pandas as pd
 from partial_json_parser import loads
 
-# --- Configuración de la Base de Datos ---
-# Es una buena práctica cargar esto desde variables de entorno o un archivo de configuración.
-# Usará una base de datos SQLite en memoria para este ejemplo.
-DATABASE_URL = "sqlite:///bd/chilecompra.db" 
+
+
+DATABASE_URL = "sqlite:///bd/chilecompra.db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-llm = init_llm()
 
 def get_db_schema(engine_instance):
     """
@@ -38,14 +36,10 @@ def generate_query_params_from_llm(user_question: str, db_schema: dict):
     Returns:
         Un diccionario con los parámetros para construir la consulta.
     """
-    # --- Aquí iría la llamada a tu LLM (ej. OpenAI, Anthropic, etc.) ---
-    # El prompt al LLM debería ser algo como:
-    # "Dado el siguiente esquema de base de datos {db_schema} y la pregunta '{user_question}',
-    # extrae la tabla, las columnas y los filtros necesarios en formato JSON.
-    # Las columnas pueden incluir funciones de agregación como SUM, AVG, COUNT.
-    # Los filtros deben ser un diccionario de 'columna': 'valor'."
 
-    db_query = f"""Tu tarea es actuar como un experto analista de datos y SQL. Dada una pregunta de usuario y un esquema de base de datos, tu objetivo es generar un objeto JSON con los parámetros necesarios para construir una consulta SQL que responda a la pregunta.
+
+    db_query = f"""Tu tarea es actuar como un experto analista de datos y SQL. Dada una pregunta de usuario y un esquema de base de datos, 
+    tu objetivo es generar un objeto JSON con los parámetros necesarios para construir una consulta SQL que responda a la pregunta.
 
 ### Esquema de la Base de Datos:
 ```json
@@ -151,28 +145,52 @@ def build_and_execute_query(query_params: dict):
     with SessionLocal() as session:
         query = text(query_str)
         result = session.execute(query, params)
-        return result.fetchall()
+        df = pd.read_sql_query(query, engine)
+        return df
 
-# --- Ejemplo de uso ---
-if __name__ == "__main__":
-    
-    # 2. Obtener el esquema de la base de datos
-    db_schema = get_db_schema(engine)
-
-    # 3. Simular una pregunta del usuario
-    pregunta = "Muéstrame el nombre y el monto de las 10 últimas licitaciones publicadas"
-
-    # 4. Usar el LLM (simulado) para obtener los parámetros de la consulta
-    params_from_llm = generate_query_params_from_llm(pregunta, db_schema)
-
-    # 5. Construir y ejecutar la consulta de forma segura
+def export_to_excel(df, filename="query_result.xlsx"):
+    """
+    Exporta un DataFrame de Pandas a un archivo Excel.
+    """
     try:
-        resultados = build_and_execute_query(params_from_llm)
-        print("\n--- Resultados de la Consulta ---")
-        if resultados:
-            for row in resultados:
-                print(row)
+        # Crear el directorio si no existe
+        output_dir = 'output'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        file_path = os.path.join(output_dir, filename)
+        df.to_excel(file_path, index=False)
+        print(f"\nResultados exportados exitosamente a '{os.path.abspath(file_path)}'")
+        return os.path.abspath(file_path)
+    except Exception as e:
+        print(f"\nError al exportar a Excel: {e}")
+        return None
+
+def answer_user_query(llm_instance, user_question: str):
+    """
+    Función principal que orquesta la respuesta a la pregunta de un usuario.
+    """
+    print(f"\n--- Procesando la pregunta: '{user_question}' ---")
+    try:
+        # 1. Obtener el esquema de la base de datos
+        db_schema = get_db_schema(engine)
+
+        # 2. Usar el LLM para obtener los parámetros de la consulta
+        print("Generando parámetros de consulta con el LLM...")
+        params_from_llm = generate_query_params_from_llm(llm_instance, user_question, db_schema)
+
+        # 3. Construir y ejecutar la consulta de forma segura
+        print("Construyendo y ejecutando la consulta SQL...")
+        resultados_df = build_and_execute_query(params_from_llm)
+
+        # 4. Mostrar los resultados y exportar a Excel
+        print("\n--- Resultados de la Consulta (DataFrame) ---")
+        if not resultados_df.empty:
+            print(resultados_df)
+            export_to_excel(resultados_df)
         else:
             print("No se encontraron resultados.")
+
     except (ValueError, Exception) as e:
-        print(f"Error: {e}")
+        print(f"\nError al procesar la consulta: {e}")
+        return None
