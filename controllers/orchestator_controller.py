@@ -6,12 +6,16 @@ from langchain_core.tools import Tool
 from langchain.prompts import ChatPromptTemplate
 from util.logger_config import get_logger
 import json
+from sqlalchemy import create_engine
 
 logger = get_logger(__name__)
 
 #env variables
 dotenv.load_dotenv()
 APIKEY = os.environ.get("OPENAI_API_KEY")
+DATABASE_URL = f"sqlite:///{os.environ.get('DATABASE_URL')}"
+engine = create_engine(DATABASE_URL)
+
 if not APIKEY:
     logger.error("OPENAI_API_KEY no encontrado en variables de entorno")
     raise ValueError("OPENAI_API_KEY no encontrado en variables de entorno")
@@ -89,3 +93,48 @@ def documents_context():
             logger.error(f"Error al guardar el archivo de contexto: {e}")
     else:
         logger.info("No se generaron nuevos contextos, no se requiere actualización del archivo.")
+
+    return context_data
+
+def user_query(user_question: str):
+    logger.info(f"Recibida pregunta de usuario: '{user_question}'")
+    try:
+        llm = init_llm('gpt-4o')
+        if not llm:
+            raise Exception("No se pudo inicializar el LLM para la consulta.")
+
+        logger.debug("Obteniendo esquema de la base de datos...")
+        bdd_schema = bd_llm_controller.get_db_schema(engine)
+        logger.debug("Obteniendo contexto de documentos...")
+        doc_context = documents_context()
+
+        prompt = f"""Eres un asistente experto que responde preguntas sobre órdenes de compra del sector público de Chile.
+
+        Tienes acceso a dos fuentes de información:
+        1. Una base de datos con el siguiente esquema:
+        ```json
+        {json.dumps(bdd_schema, indent=4)}
+        ```
+
+        2. Un conjunto de documentos de apoyo con los siguientes contextos:
+        ```json
+        {json.dumps(doc_context, indent=4)}
+        ```
+
+        Basándote exclusivamente en esta información, responde la pregunta del usuario de manera clara y concisa.
+        Pregunta del usuario: {user_question}
+        """
+        logger.debug(f"Prompt construido para el LLM: {prompt[:500]}...")
+
+        response = llm.invoke(prompt)
+        logger.info("Respuesta generada por el LLM exitosamente.")
+        return response.content
+
+    except Exception as e:
+        logger.error(f"Error al procesar la consulta del usuario: {e}")
+        return "Lo siento, ocurrió un error al procesar tu pregunta. Por favor, intenta de nuevo más tarde."
+    
+
+
+    
+    
