@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from controllers import orchestator_controller
+from controllers import doc_llm_controller
 import api.requests as requests
+import base64
 import util.logger_config as logger_config
 
 router = APIRouter()
@@ -11,14 +13,13 @@ logger = logger_config.get_logger(__name__)
 
 # Inicializar el LLM y el orquestador
 llm = orchestator_controller.init_llm()
-orchestrator = orchestator_controller.create_orchestrator_agent(llm, orchestator_controller.tools)
 
 @router.post("/ask")
 async def handle_query(request: requests.AskRequest):
     """Recibe una pregunta, la procesa con el orquestador y devuelve la respuesta."""
     logger.info(f"Recibida consulta: '{request.question}'")
     try:
-        response = orchestrator.invoke({"input": request.question})
+        response = llm.invoke({"input": request.question})
         logger.info(f"Respuesta generada: {response['output']}")
         return {"answer": response['output']}
     except Exception as e:

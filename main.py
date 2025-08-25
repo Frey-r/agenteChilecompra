@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI):
     yield
     # Lógica de apagado
     logger.info("Cerrando la conexión con Weaviate...")
+    #cerrar conección con weaviate
     orchestator_controller.weaviate_client.close()
     logger.info("Conexión con Weaviate cerrada.")
 
