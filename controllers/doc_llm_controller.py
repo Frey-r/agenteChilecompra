@@ -68,10 +68,16 @@ def vectorize_documents(doc_path):
     print(f"Chunks cargados exitosamente. Errores: {len(collection.batch.failed_objects)}")
     return vector_store
 
+def get_vector_stores(client):
+    """Obtiene el vector store."""
+    return client.collections.list_all()
+
 def search_documents(vector_store, query, k : int = 1):
     """Realiza una búsqueda en el vector store."""
     retriver = vector_store.as_retriever(search_kwargs={"k": k}) 
     search_results = retriver.invoke(query)
     return search_results
+
+
 
     
