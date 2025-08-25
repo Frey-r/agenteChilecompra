@@ -8,6 +8,7 @@ from util.logger_config import get_logger
 import json
 from sqlalchemy import create_engine
 from partial_json_parser import loads
+import re
 
 logger = get_logger(__name__)
 
@@ -100,7 +101,7 @@ def documents_context():
 def user_query(user_question: str):
     logger.info(f"Recibida pregunta de usuario: '{user_question}'")
     try:
-        llm = init_llm('gpt-5')
+        llm = init_llm('gpt-4o')
         if not llm:
             raise Exception("No se pudo inicializar el LLM para la consulta.")
 
@@ -113,6 +114,7 @@ def user_query(user_question: str):
 
         Tienes acceso a dos fuentes de información:
         1. Una base de datos con el siguiente esquema:
+        la data corresponde a órdenes de compra y licitaciones del sector público de Chile desde 2008 hasta inicios de 2025.
         ```json
         {json.dumps(bdd_schema, indent=4)}
         ```
@@ -124,7 +126,7 @@ def user_query(user_question: str):
 
         Basándote exclusivamente en esta información, responde donde está la información que necesito para responder a esta pregunta: {user_question}
         responde en formato json con la siguiente estructura:
-        ```json
+        ```json"""+"""
         {
             "base_de_datos": Boolean,
             "documentos":["collection_name"]
@@ -137,13 +139,26 @@ def user_query(user_question: str):
             "documentos":["LangChain_4f9bea898c094ff6b5465f57ca978cf5","LangChain_e00aa9eee070450ba3aa403e453c696f"]
         }
         """
-        logger.debug(f"Prompt construido para el LLM: {prompt_conocimiento[:500]}...")
 
 
         response_conocimiento = llm.invoke(prompt_conocimiento)
-        jsoned_response_conocimiento = loads(response_conocimiento.content)
+        json_match = re.search(r'\{.*\}', response_conocimiento.content, re.DOTALL)
+
+        if json_match:
+            json_string = json_match.group(0)
+            try:
+                # Reemplazar booleanos de Python por booleanos de JSON y limpiar la cadena
+                json_string = json_string.replace('True', 'true').replace('False', 'false')
+                jsoned_response_conocimiento = json.loads(json_string)
+            except json.JSONDecodeError as e:
+                logger.error(f"Error al decodificar JSON: {e} - String: {json_string}")
+                raise ValueError(f"Error al decodificar la respuesta del LLM: {e}") from e
+        else:
+            logger.error(f"No se pudo extraer un JSON válido de la respuesta del LLM: {response_conocimiento.content}")
+            raise ValueError("No se pudo interpretar la respuesta del LLM para determinar la fuente de datos.")
 
         client = doc_llm_controller.get_weaviate_client()
+       
 
         db_data_str = "No se consultaron datos de la base de datos."
         if jsoned_response_conocimiento.get('base_de_datos', False):
@@ -170,7 +185,7 @@ def user_query(user_question: str):
 
 
         final_prompt = f"""Eres un analista económico experto. Tu tarea es responder la pregunta del usuario basándote en los datos proporcionados.
-        Sintetiza la información de la base de datos y de los documentos para dar una respuesta clara y concisa.
+        Sintetiza la información de la base de datos y de los documentos para dar una respuesta clara y concisa. 
 
         **Pregunta del Usuario:**
         {user_question}
@@ -189,12 +204,16 @@ def user_query(user_question: str):
         """
 
         logger.info("Generando respuesta final con el agente sintetizador...")
-        final_response = init_llm('gpt-5').invoke(final_prompt)
+        final_response = init_llm('gpt-4o').invoke(final_prompt)
         logger.info("Respuesta generada por el LLM exitosamente.")
+        client.close() # Cerrar la conexión después de usarla
         return final_response.content
 
     except Exception as e:
         logger.error(f"Error al procesar la consulta del usuario: {e}")
+        # Asegurarse de que el cliente exista y esté conectado antes de intentar cerrarlo
+        if 'client' in locals() and client.is_connected():
+            client.close()
         return "Lo siento, ocurrió un error al procesar tu pregunta. Por favor, intenta de nuevo más tarde."
 
     
