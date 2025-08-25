@@ -99,7 +99,7 @@ def documents_context():
 def user_query(user_question: str):
     logger.info(f"Recibida pregunta de usuario: '{user_question}'")
     try:
-        llm = init_llm('gpt-4o')
+        llm = init_llm('gpt-5')
         if not llm:
             raise Exception("No se pudo inicializar el LLM para la consulta.")
 

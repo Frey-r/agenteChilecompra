@@ -12,7 +12,7 @@ DATABASE_URL = f"sqlite:///{os.environ.get("DATABASE_URL")}"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def get_db_schema(engine_instance):
+def get_db_schema(engine_instance=engine):
     """
     Obtiene el esquema de la base de datos (tablas y columnas).
     Esta información se le pasará al LLM para que entienda la estructura de los datos.

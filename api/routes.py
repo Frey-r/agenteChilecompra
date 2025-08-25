@@ -20,8 +20,8 @@ async def handle_query(request: requests.AskRequest):
     logger.info(f"Recibida consulta: '{request.question}'")
     try:
         response = orchestator_controller.user_query(request.question)
-        logger.info(f"Respuesta generada: {response['output']}")
-        return {"answer": response['output']}
+        logger.info(f"Respuesta generada: {response}")
+        return {"answer": response}
     except Exception as e:
         logger.error(f"Error al procesar la consulta: {e}")
         return {"error": "Ocurrió un error al procesar la consulta."}
