@@ -19,7 +19,7 @@ async def handle_query(request: requests.AskRequest):
     """Recibe una pregunta, la procesa con el orquestador y devuelve la respuesta."""
     logger.info(f"Recibida consulta: '{request.question}'")
     try:
-        response = llm.invoke({"input": request.question})
+        response = orchestator_controller.user_query(request.question)
         logger.info(f"Respuesta generada: {response['output']}")
         return {"answer": response['output']}
     except Exception as e:
