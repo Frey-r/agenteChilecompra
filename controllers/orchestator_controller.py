@@ -14,7 +14,6 @@ print("APIKEY: ", APIKEY)
 
 def init_llm(model: str = "gpt-5"):
     try:
-        # Usamos un modelo más accesible como gpt-3.5-turbo
         llm = ChatOpenAI(model=model, temperature=0, api_key=APIKEY)
         print("Modelo de Lenguaje (LLM) inicializado correctamente.")
         return llm
