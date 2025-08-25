@@ -48,22 +48,3 @@ def create_orchestrator_agent(llm, tools):
     ])
     agent = create_react_agent(llm, tools, prompt)
     return AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-if __name__ == "__main__":
-    llm = init_llm()
-    orchestrator = create_orchestrator_agent(llm, tools)
-
-    # Ejemplo de enrutamiento
-    user_query_doc = "¿De qué trata el anuario de aduanas?"
-    user_query_db = "¿Cuál es el monto total de las 5 licitaciones más grandes?"
-
-    print(f"\n--- Consultando al orquestador sobre el documento ---")
-    response_doc = orchestrator.invoke({"input": user_query_doc})
-    print(f"Respuesta: {response_doc['output']}")
-
-    print(f"\n--- Consultando al orquestador sobre la base de datos ---")
-    response_db = orchestrator.invoke({"input": user_query_db})
-    print(f"Respuesta: {response_db['output']}")
-
-    weaviate_client.close()
-    print("\n--- Proceso del Agente Finalizado ---")

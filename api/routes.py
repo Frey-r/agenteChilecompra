@@ -1,21 +1,20 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from controllers import orchestator_controller
+import api.requests as requests
 import util.logger_config as logger_config
 
 router = APIRouter()
 logger = logger_config.get_logger(__name__)
 
-# Modelo para la entrada de la consulta
-class QueryRequest(BaseModel):
-    question: str
+
 
 # Inicializar el LLM y el orquestador
 llm = orchestator_controller.init_llm()
 orchestrator = orchestator_controller.create_orchestrator_agent(llm, orchestator_controller.tools)
 
-@router.post("/query/")
-def handle_query(request: QueryRequest):
+@router.post("/ask")
+async def handle_query(request: requests.AskRequest):
     """Recibe una pregunta, la procesa con el orquestador y devuelve la respuesta."""
     logger.info(f"Recibida consulta: '{request.question}'")
     try:
@@ -25,3 +24,17 @@ def handle_query(request: QueryRequest):
     except Exception as e:
         logger.error(f"Error al procesar la consulta: {e}")
         return {"error": "Ocurrió un error al procesar la consulta."}
+
+@router.post("/documents/upload")
+async def upload_document(request: requests.DocumentRequest):
+    """Recibe un documento PDF y lo procesa con el orquestador."""
+    logger.info("Recibido documento PDF")
+    try:
+        pdf_data = base64.b64decode(request.pdf)
+        with open(f"docs/{request.name}.pdf", "wb") as f:
+            f.write(pdf_data)
+        doc_llm_controller.vectorize_documents(f"docs/{request.name}.pdf")
+        return {"message": "Documento procesado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al procesar el documento: {e}")
+        return {"error": "Ocurrió un error al procesar el documento."}
