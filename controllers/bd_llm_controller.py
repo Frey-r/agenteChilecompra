@@ -7,7 +7,7 @@ from partial_json_parser import loads
 
 
 
-DATABASE_URL = "sqlite:///bd/chilecompra.db"
+DATABASE_URL = f"sqlite:///{os.environ.get("DATABASE_URL")}"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
